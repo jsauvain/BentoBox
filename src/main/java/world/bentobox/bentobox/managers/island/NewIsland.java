@@ -187,6 +187,10 @@ public class NewIsland {
                 throw new IOException("commands.island.create.unable-create-island");
             }
         }
+        configureNewIsland(oldIsland, next);
+    }
+
+    private void configureNewIsland(Island oldIsland, Location next) {
         // Clear any old home locations (they should be clear, but just in case)
         plugin.getPlayers().clearHomeLocations(world, user.getUniqueId());
         // Set home location
