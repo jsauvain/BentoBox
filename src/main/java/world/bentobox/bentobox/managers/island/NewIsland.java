@@ -1,13 +1,10 @@
 package world.bentobox.bentobox.managers.island;
 
-import java.io.IOException;
-
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.World.Environment;
 import org.bukkit.util.Vector;
-
 import world.bentobox.bentobox.BStats;
 import world.bentobox.bentobox.BentoBox;
 import world.bentobox.bentobox.api.addons.GameModeAddon;
@@ -18,10 +15,12 @@ import world.bentobox.bentobox.api.user.User;
 import world.bentobox.bentobox.database.objects.Island;
 import world.bentobox.bentobox.managers.BlueprintsManager;
 
+import java.io.IOException;
+
 /**
  * Create and paste a new island
- * @author tastybento
  *
+ * @author tastybento
  */
 public class NewIsland {
     private BentoBox plugin;
@@ -61,6 +60,7 @@ public class NewIsland {
 
     /**
      * Start building a new island
+     *
      * @return New island builder object
      */
     public static Builder builder() {
@@ -69,6 +69,7 @@ public class NewIsland {
 
     /**
      * Build a new island for a player
+     *
      * @author tastybento
      */
     public static class Builder {
@@ -95,6 +96,7 @@ public class NewIsland {
 
         /**
          * Sets the reason
+         *
          * @param reason reason, can only be {@link Reason#CREATE} or {@link Reason#RESET}.
          */
         public Builder reason(Reason reason) {
@@ -107,6 +109,7 @@ public class NewIsland {
 
         /**
          * Set the addon
+         *
          * @param addon a game mode addon
          */
         public Builder addon(GameModeAddon addon) {
@@ -155,39 +158,41 @@ public class NewIsland {
 
     /**
      * Makes an island.
+     *
      * @param oldIsland old island that is being replaced, if any
      * @throws IOException - if an island cannot be made. Message is the tag to show the user.
      */
     public void newIsland(Island oldIsland) throws IOException {
-        Location next = null;
         if (plugin.getIslands().hasIsland(world, user)) {
             // Island exists, it just needs pasting
             island = plugin.getIslands().getIsland(world, user);
             if (island != null && island.isReserved()) {
-                next = island.getCenter();
+                Location newIslandLocation = island.getCenter();
                 // Clear the reservation
                 island.setReserved(false);
+                if (newIslandLocation != null) {
+                    configureNewIsland(oldIsland, newIslandLocation);
+                    return;
+                }
             } else {
                 // This should never happen unless we allow another way to paste over islands without reserving
                 plugin.logError("New island for user " + user.getName() + " was not reserved!");
             }
         }
         // If the reservation fails, then we need to make a new island anyway
-        if (next == null) {
-            next = this.locationStrategy.getNextLocation(world);
-            if (next == null) {
-                plugin.logError("Failed to make island - no unoccupied spot found.");
-                plugin.logError("If the world was imported, try multiple times until all unowned islands are known.");
-                throw new IOException("commands.island.create.cannot-create-island");
-            }
-            // Add to the grid
-            island = plugin.getIslands().createIsland(next, user.getUniqueId());
-            if (island == null) {
-                plugin.logError("Failed to make island! Island could not be added to the grid.");
-                throw new IOException("commands.island.create.unable-create-island");
-            }
+        Location newIslandLocation = this.locationStrategy.getNextLocation(world);
+        if (newIslandLocation == null) {
+            plugin.logError("Failed to make island - no unoccupied spot found.");
+            plugin.logError("If the world was imported, try multiple times until all unowned islands are known.");
+            throw new IOException("commands.island.create.cannot-create-island");
         }
-        configureNewIsland(oldIsland, next);
+        // Add to the grid
+        island = plugin.getIslands().createIsland(newIslandLocation, user.getUniqueId());
+        if (island == null) {
+            plugin.logError("Failed to make island! Island could not be added to the grid.");
+            throw new IOException("commands.island.create.unable-create-island");
+        }
+        configureNewIsland(oldIsland, newIslandLocation);
     }
 
     private void configureNewIsland(Island oldIsland, Location next) {
@@ -218,14 +223,14 @@ public class NewIsland {
         }
         // Get the new BlueprintBundle if it was changed
         switch (reason) {
-        case CREATE:
-            name = ((IslandEvent.IslandCreateEvent) event).getBlueprintBundle().getUniqueId();
-            break;
-        case RESET:
-            name = ((IslandEvent.IslandResetEvent) event).getBlueprintBundle().getUniqueId();
-            break;
-        default:
-            break;
+            case CREATE:
+                name = ((IslandEvent.IslandCreateEvent) event).getBlueprintBundle().getUniqueId();
+                break;
+            case RESET:
+                name = ((IslandEvent.IslandResetEvent) event).getBlueprintBundle().getUniqueId();
+                break;
+            default:
+                break;
         }
 
         // Task to run after creating the island
@@ -275,22 +280,22 @@ public class NewIsland {
         // Fire exit event
         Reason reasonDone = Reason.CREATED;
         switch (reason) {
-        case CREATE:
-            reasonDone = Reason.CREATED;
-            break;
-        case RESET:
-            reasonDone = Reason.RESETTED;
-            break;
-        default:
-            break;
+            case CREATE:
+                reasonDone = Reason.CREATED;
+                break;
+            case RESET:
+                reasonDone = Reason.RESETTED;
+                break;
+            default:
+                break;
         }
         IslandEvent.builder()
-        .involvedPlayer(user.getUniqueId())
-        .reason(reasonDone)
-        .island(island)
-        .location(island.getCenter())
-        .oldIsland(oldIsland)
-        .build();
+                .involvedPlayer(user.getUniqueId())
+                .reason(reasonDone)
+                .island(island)
+                .location(island.getCenter())
+                .oldIsland(oldIsland)
+                .build();
 
     }
 }
