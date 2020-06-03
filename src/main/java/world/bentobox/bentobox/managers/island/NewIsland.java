@@ -180,19 +180,24 @@ public class NewIsland {
             }
         }
         // If the reservation fails, then we need to make a new island anyway
-        Location newIslandLocation = this.locationStrategy.getNextLocation(world);
-        if (newIslandLocation == null) {
-            plugin.logError("Failed to make island - no unoccupied spot found.");
-            plugin.logError("If the world was imported, try multiple times until all unowned islands are known.");
-            throw new IOException("commands.island.create.cannot-create-island");
-        }
-        // Add to the grid
-        island = plugin.getIslands().createIsland(newIslandLocation, user.getUniqueId());
-        if (island == null) {
-            plugin.logError("Failed to make island! Island could not be added to the grid.");
-            throw new IOException("commands.island.create.unable-create-island");
-        }
-        configureNewIsland(oldIsland, newIslandLocation);
+        this.locationStrategy.getNextLocation(world, newIslandLocation -> {
+            if (newIslandLocation == null) {
+                plugin.logError("Failed to make island - no unoccupied spot found.");
+                plugin.logError("If the world was imported, try multiple times until all unowned islands are known.");
+                plugin.logError("Could not create island for player. commands.island.create.cannot-create-island");
+                user.sendMessage("commands.island.create.cannot-create-island");
+                return;
+            }
+            // Add to the grid
+            island = plugin.getIslands().createIsland(newIslandLocation, user.getUniqueId());
+            if (island == null) {
+                plugin.logError("Failed to make island! Island could not be added to the grid.");
+                plugin.logError("Could not create island for player. commands.island.create.unable-create-island");
+                user.sendMessage("commands.island.create.unable-create-island");
+                return;
+            }
+            configureNewIsland(oldIsland, newIslandLocation);
+        });
     }
 
     private void configureNewIsland(Island oldIsland, Location next) {

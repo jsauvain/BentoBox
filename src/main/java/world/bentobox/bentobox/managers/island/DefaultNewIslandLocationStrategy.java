@@ -1,24 +1,21 @@
 package world.bentobox.bentobox.managers.island;
 
-import java.util.Arrays;
-import java.util.EnumMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.BlockFace;
-
 import world.bentobox.bentobox.BentoBox;
 import world.bentobox.bentobox.util.Util;
 
+import java.io.IOException;
+import java.util.*;
+import java.util.function.Consumer;
+
 /**
  * The default strategy for generating locations for island
+ *
  * @author tastybento, leonardochaia
  * @since 1.8.0
- *
  */
 public class DefaultNewIslandLocationStrategy implements NewIslandLocationStrategy {
 
@@ -35,7 +32,7 @@ public class DefaultNewIslandLocationStrategy implements NewIslandLocationStrate
     protected BentoBox plugin = BentoBox.getInstance();
 
     @Override
-    public Location getNextLocation(World world) {
+    public void getNextLocation(World world, Consumer<Location> postAction) throws IOException {
         Location last = plugin.getIslands().getLast(world);
         if (last == null) {
             last = new Location(world,
@@ -60,10 +57,10 @@ public class DefaultNewIslandLocationStrategy implements NewIslandLocationStrate
             plugin.logError("Blocks around center locations: " + result.getOrDefault(Result.BLOCKS_IN_AREA, 0) + " max "
                     + MAX_UNOWNED_ISLANDS);
             plugin.logError("Known islands: " + result.getOrDefault(Result.ISLAND_FOUND, 0) + " max unlimited.");
-            return null;
+            postAction.accept(null);
         }
         plugin.getIslands().setLast(last);
-        return last;
+        postAction.accept(last);
     }
 
     /**
@@ -75,7 +72,7 @@ public class DefaultNewIslandLocationStrategy implements NewIslandLocationStrate
     protected Result isIsland(Location location) {
         // Quick check
         if (plugin.getIslands().getIslandAt(location).isPresent()) return Result.ISLAND_FOUND;
-        
+
         World world = location.getWorld();
 
         // Check 4 corners
@@ -100,8 +97,8 @@ public class DefaultNewIslandLocationStrategy implements NewIslandLocationStrate
             return Result.FREE;
         }
         // Block check
-        if (!plugin.getIWM().isUseOwnGenerator(world) && Arrays.asList(BlockFace.values()).stream().anyMatch(bf -> 
-        !location.getBlock().getRelative(bf).isEmpty() && !location.getBlock().getRelative(bf).getType().equals(Material.WATER))) {
+        if (!plugin.getIWM().isUseOwnGenerator(world) && Arrays.asList(BlockFace.values()).stream().anyMatch(bf ->
+                !location.getBlock().getRelative(bf).isEmpty() && !location.getBlock().getRelative(bf).getType().equals(Material.WATER))) {
             // Block found
             plugin.getIslands().createIsland(location);
             return Result.BLOCKS_IN_AREA;
